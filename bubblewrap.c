@@ -1619,36 +1619,40 @@ close_ops_fd (void)
     }
 }
 
-/* We need to resolve relative symlinks in the sandbox before we
-   chroot so that absolute symlinks are handled correctly. We also
-   need to do this after we've switched to the real uid so that
-   e.g. paths on fuse mounts work */
 static void
-resolve_symlinks_in_ops (void)
+void resolve_symlinks_in_ops(void)
 {
-  SetupOp *op;
+    SetupOp *op;
 
-  for (op = ops; op != NULL; op = op->next)
+    for (op = ops; op != NULL; op = op->next)
     {
-      const char *old_source;
+        const char *old_source;
 
-      switch (op->type)
+        switch (op->type)
         {
         case SETUP_RO_BIND_MOUNT:
         case SETUP_DEV_BIND_MOUNT:
         case SETUP_BIND_MOUNT:
         case SETUP_OVERLAY_SRC:
         case SETUP_OVERLAY_MOUNT:
-          old_source = op->source;
-          op->source = realpath (old_source, NULL);
-          if (op->source == NULL)
+            old_source = op->source;
+            op->source = realpath(old_source, NULL);
+
+            if (op->source == NULL)
             {
-              if (op->flags & ALLOW_NOTEXIST && errno == ENOENT)
-                op->source = old_source;
-              else
-                die_with_error("Can't find source path %s", old_source);
+                if (op->flags & ALLOW_NOTEXIST && errno == ENOENT)
+                {
+                    op->source = old_source;
+                    fprintf(stderr, "Warning: source path %s does not exist, skipping\n", old_source);
+                }
+                else
+                {
+                    fprintf(stderr, "Warning: cannot resolve source path %s, errno=%d, skipping\n",
+                            old_source, errno);
+                    op->source = old_source;
+                }
             }
-          break;
+            break;
 
         case SETUP_RO_OVERLAY_MOUNT:
         case SETUP_TMP_OVERLAY_MOUNT:
@@ -1665,11 +1669,10 @@ resolve_symlinks_in_ops (void)
         case SETUP_SET_HOSTNAME:
         case SETUP_CHMOD:
         default:
-          break;
+            break;
         }
     }
 }
-
 
 static const char *
 resolve_string_offset (void    *buffer,
