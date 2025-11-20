@@ -1395,27 +1395,30 @@ setup_newroot (bool unshare_pid,
           static const char *const stdionodes[] = { "stdin", "stdout", "stderr" };
          for (i = 0; i < N_ELEMENTS(stdionodes); i++)
             {
-                cleanup_free char *target = xasprintf("/proc/self/fd/%d", i);
-                cleanup_free char *node_dest = strconcat3(dest, "/", stdionodes[i]);
+                char *target = xasprintf("/proc/self/fd/%d", i);
+                char *node_dest = strconcat3(dest, "/", stdionodes[i]);
             
                 if (access(target, F_OK) == 0)
                 {
                     if (symlink(target, node_dest) < 0)
                         fprintf(stderr, "Warning: cannot create symlink %s/%s, skipping\n",
-                                op->dest, stdionodes[i]);
+                                dest, stdionodes[i]);
                 }
+            
+                free(target);
+                free(node_dest);
             }
             
             {
-                cleanup_free char *dev_fd = strconcat(dest, "/fd");
+                char *dev_fd = strconcat(dest, "/fd");
                 if (symlink("/proc/self/fd", dev_fd) < 0)
                     fprintf(stderr, "Warning: cannot create symlink %s, skipping\n", dev_fd);
-            }
+                free(dev_fd);
             
-            {
-                cleanup_free char *dev_core = strconcat(dest, "/core");
+                char *dev_core = strconcat(dest, "/core");
                 if (symlink("/proc/kcore", dev_core) < 0)
                     fprintf(stderr, "Warning: cannot create symlink %s, skipping\n", dev_core);
+                free(dev_core);
             }
 
           {
